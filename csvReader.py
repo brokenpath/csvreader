@@ -63,7 +63,7 @@ class CSV:
 
 		#TODO: doublequote, skipinitialspace, strict
 		self.re = re.compile(r'''
-			(?!$)((?:								# Start capturing here.
+			(?=\S)((?:								# Start capturing here.
 			  [^{lineterminator}{quotechar}]		# Either a series of non-lineterminator non-quote characters.
 			  |										# OR
 			  {quotechar}(?:						# A double-quote followed by a string of characters...
@@ -97,7 +97,8 @@ class CSV:
 		# 		skipSpace=skipSpace), re.VERBOSE)
 
 	def __del__(self):
-		logging.debug("Lines read {}".format(self.lineNum))
+		#logging.debug("Lines read {}".format(self.lineNum))
+		return
 
 	def __iter__(self):
 		self.header()
@@ -115,7 +116,6 @@ class CSV:
 
 	def get_next_row(self, skip=False):
 		row = next(self.csvIter).encode(self.encoding)
-		print(row.__repr__())
 		self.lineNum += 1
 
 		if not skip:
@@ -202,8 +202,8 @@ if __name__ == "__main__":
 	print("Header: " + str(csvObj.header()))
 	for l in csvObj:
 		print(l)
-		if csvObj.lineNum == 560:
-			break
+		# if csvObj.lineNum == 560:
+		# 	break
 		continue
 	print("Lines reader: " + str(csvObj.lineNum))
 
