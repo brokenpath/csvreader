@@ -1,5 +1,4 @@
 from __future__ import print_function
-import enum
 from collections import OrderedDict
 import csv
 from csv import (
@@ -73,7 +72,7 @@ def get_dialect(dialect, **fmtparams):
     )
 
 
-class ReaderState(enum.Enum):
+class ReaderState:
     END_OF_FIELD = 0
     END_OF_RECORD = 1
 
