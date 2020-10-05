@@ -7,7 +7,9 @@ from __future__ import unicode_literals
 import sys
 import io
 import unittest
-import csv_reader
+
+import mcsv
+from mcsv import csv_reader
 from textwrap import dedent
 from collections import OrderedDict
 

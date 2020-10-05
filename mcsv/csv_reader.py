@@ -199,6 +199,80 @@ class Reader:
     next = __next__
 
 
+
+class RegexReader:
+	def __init__(self, file, dialect=None, encoding='latin-1'):
+		self.lineNum = 0
+		self.dialect = dialect
+		self.encoding = encoding
+		
+		f = open(file, 'rb') #mv filepointer out
+		file = f.read().decode(encoding, 'replace')
+
+		#TODO: doublequote, skipinitialspace, strict
+		self.re = re.compile(r'''
+			(?=\S)((?:								# Start capturing here.
+			  [^{lineterminator}{quotechar}]		# Either a series of non-lineterminator non-quote characters.
+			  |										# OR
+			  {quotechar}(?:						# A double-quote followed by a string of characters...
+				[^{quotechar}\{escapechar}]|\{escapechar}.	# That are either non-quotes or escaped...
+			  )*									# ...repeated any number of times.
+			  {quotechar}							# Followed by a closing double-quote.
+			)*)										# Done capturing.
+			(?:[{lineterminator}]|$)				# Followed by a lineterminator or the end of a string.
+			'''.format(lineterminator=dialect.lineterminator, quotechar=dialect.quotechar, escapechar=dialect.escapechar), re.VERBOSE)
+
+		self.csvIter = (x.group(1) for x in self.re.finditer(file))
+
+	def __del__(self):
+		return
+
+	def __iter__(self):
+		self.header()
+		return self
+
+	def next(self):
+		return self.__next__()
+
+	def __next__(self):
+		row = None
+		while row == None:
+			row = self.get_next_row()
+		return dict(zip(self.header(), row))
+
+	def get_next_row(self, skip=False):
+		row = next(self.csvIter).encode(self.encoding)
+		self.lineNum += 1
+
+		if not skip:
+			#Split cells
+			row = list(csv.reader([row], dialect=self.dialect))[0]
+			# Check empty cells
+			for cell in row:
+				if len(cell) == 0:
+					logging.warning("Empty cell at line {}".format(self.lineNum))
+
+		return row
+
+	def header(self):
+		try:
+			return self.headerLine
+		except AttributeError as error:
+			raise Exception("Header not defined")
+
+	def read_header(self):
+		row = self.get_next_row()
+		if row == None:
+			raise Exception("Bad header")
+
+		self.headerLine = row
+
+	def skip(self, skip_lines):
+		for _ in range(skip_lines):
+			row = self.get_next_row(verify=False, skip=True)
+
+
+
 class DictReader:
     """Reads records of CSV file to dict objects.
 
@@ -271,6 +345,40 @@ class DictReader:
         return d
 
     next = __next__
+
+
+
+from arpeggio import *
+from arpeggio import RegExMatch as _
+
+class PEGParserFactory:
+
+
+	def record():                   return field, ZeroOrMore(file1Dialect.delimiter, field)
+	def field():                    return Optional([quoted_field, field_content])
+	def quoted_field():             return file1Dialect.quotechar, field_content_quoted, file1Dialect.quotechar
+	def field_content():            return _(r'([^{d}{t}])+'.format(d=file1Dialect.delimiter, t=file1Dialect.lineterminator))
+	def field_content_quoted():     return _(r'(({q}{q})|([^{q}]))+'.format(q=file1Dialect.quotechar))
+	def csvfile():                  return OneOrMore([record], file1Dialect.lineterminator) 
+
+
+	def gen_parser():
+		return ParserPython(csvfile, ws='\t ')
+		
+
+class CSVVisitor(PTNodeVisitor):
+    def visit_record(self, node, children):
+        # record is a list of fields. The children nodes are fields so just
+        # transform it to python list.
+        return list(children)
+
+    def visit_csvfile(self, node, children):
+        # We are not interested in empty lines so we will filter them.
+        return [x for x in children if x!='\n']
+
+
+
+
 
 
 def main():
