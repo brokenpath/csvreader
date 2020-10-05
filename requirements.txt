@@ -1,2 +1,5 @@
 pytest
 hypothesis
+pytest-benchmark
+arpeggio
+
