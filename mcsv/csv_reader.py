@@ -347,36 +347,80 @@ class DictReader:
 
 
 
-from arpeggio import *
-from arpeggio import RegExMatch as _
+from lark import Lark, Transformer
 
 class PEGParserFactory:
+    def __init__(self, file, dialect=None, encoding='latin-1'):
+        self.lineNum = 0
+        self.dialect = dialect
+        self.encoding = encoding
+        
+        f = open(file, 'rb') #mv filepointer out
+        file = f.read().decode(encoding, 'replace')
 
+        #TODO: doublequote, skipinitialspace, strict
+        grammar = """
+        start: record ("{t}" record)* 
+        record: field ("{d}" field)*
+        field: (quoted_field | FIELD_CONTENT)*
+        quoted_field.1: QUOTECHAR FIELD_CONTENT_QUOTED? QUOTECHAR
+        FIELD_CONTENT: /([^{d}{t}{q}])+/
+        FIELD_CONTENT_QUOTED: /[^{q}]+/
+        QUOTECHAR: /{q}/
+        """.format(t=file1Dialect.lineterminator, d=file1Dialect.delimiter, q=file1Dialect.quotechar)
 
-	def record():                   return field, ZeroOrMore(file1Dialect.delimiter, field)
-	def field():                    return Optional([quoted_field, field_content])
-	def quoted_field():             return file1Dialect.quotechar, field_content_quoted, file1Dialect.quotechar
-	def field_content():            return _(r'([^{d}{t}])+'.format(d=file1Dialect.delimiter, t=file1Dialect.lineterminator))
-	def field_content_quoted():     return _(r'(({q}{q})|([^{q}]))+'.format(q=file1Dialect.quotechar))
-	def csvfile():                  return OneOrMore([record], file1Dialect.lineterminator) 
+        class csvTransformer(Transformer):
+            def quoted_field(self, s):
+                return ''.join(s)
 
+            def field(self, s):
+                return ''.join(s)
 
-	def gen_parser():
-		return ParserPython(csvfile, ws='\t ')
-		
+            record = list
+            start = list
 
-class CSVVisitor(PTNodeVisitor):
-    def visit_record(self, node, children):
-        # record is a list of fields. The children nodes are fields so just
-        # transform it to python list.
-        return list(children)
+        p = Lark(grammar, parser="lalr", transformer=csvTransformer())
 
-    def visit_csvfile(self, node, children):
-        # We are not interested in empty lines so we will filter them.
-        return [x for x in children if x!='\n']
+        self.csvIter = iter(p.parse(file))
 
+    def __del__(self):
+        return
 
+    def __iter__(self):
+        self.header()
+        return self
 
+    def next(self):
+        return self.__next__()
+
+    def __next__(self):
+        row = None
+        while row == None:
+            row = self.get_next_row()
+        return dict(zip(self.header(), row))
+
+    def get_next_row(self, skip=False):
+        row = next(self.csvIter)
+        self.lineNum += 1
+
+        return row
+
+    def header(self):
+        try:
+            return self.headerLine
+        except AttributeError as error:
+            raise Exception("Header not defined")
+
+    def read_header(self):
+        row = self.get_next_row()
+        if row == None:
+            raise Exception("Bad header")
+
+        self.headerLine = row
+
+    def skip(self, skip_lines):
+        for _ in range(skip_lines):
+            row = self.get_next_row(verify=False, skip=True)
 
 
 
