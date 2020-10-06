@@ -350,6 +350,7 @@ class DictReader:
 from lark import Lark, Transformer
 
 class PEGParserFactory:
+    # TODO : will pop if dialect contains unescaped \ chars examples \n
     def __init__(self, file, dialect=None, encoding='latin-1'):
         self.lineNum = 0
         self.dialect = dialect
@@ -367,7 +368,7 @@ class PEGParserFactory:
         FIELD_CONTENT: /([^{d}{t}{q}])+/
         FIELD_CONTENT_QUOTED: /[^{q}]+/
         QUOTECHAR: /{q}/
-        """.format(t=file1Dialect.lineterminator, d=file1Dialect.delimiter, q=file1Dialect.quotechar)
+        """.format(t=dialect.lineterminator, d=dialect.delimiter, q=dialect.quotechar)
 
         class csvTransformer(Transformer):
             def quoted_field(self, s):
