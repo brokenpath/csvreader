@@ -200,13 +200,12 @@ class Reader:
 
 
 class RegexReader:
-	def __init__(self, file, dialect=None, encoding='latin-1'):
+	def __init__(self, fp, dialect=None, encoding='latin-1'):
 		self.lineNum = 0
 		self.dialect = dialect
 		self.encoding = encoding
 		
-		f = open(file, 'rb') #mv filepointer out
-		file = f.read().decode(encoding, 'replace')
+		data = fp.read().decode(encoding, 'replace')
 
 		#TODO: doublequote, skipinitialspace, strict
 		self.re = re.compile(r'''
@@ -221,7 +220,7 @@ class RegexReader:
 			(?:[{lineterminator}]|$)				# Followed by a lineterminator or the end of a string.
 			'''.format(lineterminator=dialect.lineterminator, quotechar=dialect.quotechar, escapechar=dialect.escapechar), re.VERBOSE)
 
-		self.csvIter = (x.group(1) for x in self.re.finditer(file))
+		self.csvIter = (x.group(1) for x in self.re.finditer(data))
 
 	def __del__(self):
 		return
@@ -351,13 +350,13 @@ from lark import Lark, Transformer
 
 class PEGParserFactory:
     # TODO : will pop if dialect contains unescaped \ chars examples \n
-    def __init__(self, file, dialect=None, encoding='latin-1'):
+    def __init__(self, fp, dialect=None, encoding='latin-1'):
         self.lineNum = 0
         self.dialect = dialect
         self.encoding = encoding
         
-        f = open(file, 'rb') #mv filepointer out
-        file = f.read().decode(encoding, 'replace')
+        data = fp.read()
+        #.decode(encoding, 'replace') TODO make independent of it only being a file
 
         #TODO: doublequote, skipinitialspace, strict
         grammar = """
@@ -382,7 +381,7 @@ class PEGParserFactory:
 
         p = Lark(grammar, parser="lalr", transformer=csvTransformer())
 
-        self.csvIter = iter(p.parse(file))
+        self.csvIter = iter(p.parse(data))
 
     def __del__(self):
         return
