@@ -4,7 +4,7 @@ import unittest
 import io
 from io import (StringIO, SEEK_SET)
 import csv
-from hypothesis import given
+from hypothesis import given, reproduce_failure
 import hypothesis.strategies as st
 import mcsv
 from mcsv.csv_reader import (
@@ -37,10 +37,11 @@ class SameResult(unittest.TestCase):
 
         self.header = "field1" + self.dialect.delimiter + "field2" 
         
-    
+    @reproduce_failure('4.23.6', b'AAEAIwA=')
     @given(st.text())
     def test_random_string(self, s):
-        input = StringIO(self.header+self.dialect.lineterminator + s)
+        input_str = self.header+self.dialect.lineterminator + s
+        input = StringIO(input_str)
         peg_parser = PEGParserFactory(input,self.dialect_peg)
         peg_parser.read_header()
         peg_result = [l for l in peg_parser]
