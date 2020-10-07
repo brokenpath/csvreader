@@ -256,12 +256,12 @@ class RegexReader:
 		try:
 			return self.headerLine
 		except AttributeError as error:
-			raise Exception("Header not defined")
+			raise Error("Header not defined")
 
 	def read_header(self):
 		row = self.get_next_row()
 		if row == None:
-			raise Exception("Bad header")
+			raise Error("Bad header")
 
 		self.headerLine = row
 
@@ -400,7 +400,10 @@ class PEGParserFactory:
         return dict(zip(self.header(), row))
 
     def get_next_row(self, skip=False):
-        row = next(self.csvIter)
+        try:
+            row = next(self.csvIter)
+        except Exception e:
+            raise Error(str(e))
         self.lineNum += 1
 
         return row
@@ -409,12 +412,12 @@ class PEGParserFactory:
         try:
             return self.headerLine
         except AttributeError as error:
-            raise Exception("Header not defined")
+            raise Error("Header not defined")
 
     def read_header(self):
         row = self.get_next_row()
         if row == None:
-            raise Exception("Bad header")
+            raise Error("Bad header")
 
         self.headerLine = row
 
